@@ -105,7 +105,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp23</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\u5711834\Documents\ChatApplication\imgui-1.92.5</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\u5711834\Documents\ChatApplication\imgui-1.92.5; C:\Users\u5711834\Documents\ChatApplication\imgui-1.92.5\backends</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -121,6 +121,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>C:\Users\u5711834\Documents\ChatApplication\imgui-1.92.5; C:\Users\u5711834\Documents\ChatApplication\imgui-1.92.5\backends</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,10 +129,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\imgui-1.92.5\backends\imgui_impl_dx12.cpp" />
+    <ClCompile Include="..\imgui-1.92.5\backends\imgui_impl_win32.cpp" />
+    <ClCompile Include="..\imgui-1.92.5\imgui.cpp" />
+    <ClCompile Include="..\imgui-1.92.5\imgui_demo.cpp" />
+    <ClCompile Include="..\imgui-1.92.5\imgui_draw.cpp" />
+    <ClCompile Include="..\imgui-1.92.5\imgui_tables.cpp" />
+    <ClCompile Include="..\imgui-1.92.5\imgui_widgets.cpp" />
+    <ClCompile Include="..\imgui-1.92.5\misc\cpp\imgui_stdlib.cpp" />
+    <ClCompile Include="imguiHandler.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MessageHandler.cpp" />
     <ClCompile Include="Socket.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\imgui-1.92.5\backends\imgui_impl_dx12.h" />
+    <ClInclude Include="..\imgui-1.92.5\backends\imgui_impl_win32.h" />
+    <ClInclude Include="..\imgui-1.92.5\imconfig.h" />
+    <ClInclude Include="..\imgui-1.92.5\imgui.h" />
+    <ClInclude Include="..\imgui-1.92.5\imgui_internal.h" />
+    <ClInclude Include="..\imgui-1.92.5\imstb_rectpack.h" />
+    <ClInclude Include="..\imgui-1.92.5\imstb_textedit.h" />
+    <ClInclude Include="..\imgui-1.92.5\imstb_truetype.h" />
+    <ClInclude Include="..\imgui-1.92.5\misc\cpp\imgui_stdlib.h" />
+    <ClInclude Include="imguiHandler.h" />
+    <ClInclude Include="MessageHandler.h" />
     <ClInclude Include="Socket.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

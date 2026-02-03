@@ -1,10 +1,24 @@
 #pragma once
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <vector>
+#include <string>
+#include <iostream>
+#include "MessageHandler.h"
+
+#pragma comment(lib, "Ws2_32.lib")
+
+struct Client {
+    SOCKET client_socket;
+    std::string username = "";
+    bool is_invalid = true;
+    int messages_sent = 0;
+};
 
 class Server {
     WSADATA wsaData;
     SOCKET server_socket;
-    std::vector<SOCKET> client_sockets{};
+    std::vector<std::unique_ptr<Client>> clients;
 public:
     bool is_invalid = false;
 
@@ -32,49 +46,35 @@ public:
             cleanUp();
             return;
         }
-
-        
     }
 
-    SOCKET incomingConnection() {
+    Client* incomingConnection() {
         if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR) {
             std::cerr << "Listen failed with error: " << WSAGetLastError() << std::endl;
             cleanUp();
-            return -1;
+            return nullptr;
         }
-        std::cout << "Server is listening on port 65432..." << std::endl;
+        std::cout << "Server is listening..." << std::endl;
         
         sockaddr_in client_address = {};
         int client_address_len = sizeof(client_address);
-        int i = client_sockets.size();
-        client_sockets.emplace_back();
-        client_sockets.at(i) = accept(server_socket, (sockaddr*)&client_address, &client_address_len);
-        if (client_sockets.at(i) == INVALID_SOCKET) {
+        int i = clients.size();
+        clients.emplace_back(std::make_unique<Client>());
+        clients.at(i)->client_socket = accept(server_socket, (sockaddr*)&client_address, &client_address_len);
+        if (clients.at(i)->client_socket == INVALID_SOCKET) {
             std::cerr << "Accept failed with error: " << WSAGetLastError() << std::endl;
             cleanUp();
-            return -1;
+            return nullptr;
         }
         char client_ip[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &client_address.sin_addr, client_ip, INET_ADDRSTRLEN);
         std::cout << "Accepted connection from " << client_ip << ":" << ntohs(client_address.sin_port) << std::endl;
-        return client_sockets.at(i);
-    }
 
-    void clientCommunication(int i) {
-        char buffer[1024] = { 0 };
-        int bytes_received = recv(client_sockets.at(i), buffer, sizeof(buffer) - 1, 0);
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0';
-            std::cout << "Received: " << buffer << std::endl;
 
-            // Reverse the string
-            std::string response(buffer);
-            std::reverse(response.begin(), response.end());
-
-            // Send the reversed string back
-            send(client_sockets.at(i), response.c_str(), static_cast<int>(response.size()), 0);
-            std::cout << "Reversed string sent back to client." << std::endl;
-        }
+        std::string response = "Hi! What's your username?";
+        send(clients.at(i)->client_socket, response.c_str(), static_cast<int>(response.size()), 0);
+        clients.at(i)->is_invalid = false;
+        return clients.at(i).get();
     }
 
     void cleanUp() {
@@ -90,3 +90,6 @@ public:
     Server(const Server&) = delete;
     Server& operator=(const Server&) = delete;
 };
+
+void clientReceive(Client* client, MessageHandler& messages);
+void clientSend(Client* client, MessageHandler& messages);

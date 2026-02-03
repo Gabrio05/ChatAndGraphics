@@ -13,6 +13,7 @@
 #include <dxgi1_5.h>
 #include <tchar.h>
 
+#pragma comment(lib, "d3d12.lib")
 #ifdef _DEBUG
 #define DX12_ENABLE_DEBUG_LAYER
 #endif

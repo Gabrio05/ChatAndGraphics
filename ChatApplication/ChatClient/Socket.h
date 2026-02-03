@@ -4,8 +4,9 @@
 #include <ws2tcpip.h>
 #include <iostream>
 #include <string>
+#include "MessageHandler.h"
 
-#define DEFAULT_BUFFER_SIZE 1024
+constexpr int _socket_client_buffer_size = 1024;
 
 class Socket {
     const char* host = "127.0.0.1";
@@ -53,30 +54,6 @@ public:
         std::cout << "Connected to the server." << std::endl;
     }
 
-    void sendMessage() {
-        // Send the sentence to the server
-        if (send(client_socket, sentence.c_str(), static_cast<int>(sentence.size()), 0) == SOCKET_ERROR) {
-            std::cerr << "Send failed with error: " << WSAGetLastError() << std::endl;
-            cleanUp();
-            return;
-        }
-        std::cout << "Sent: " << sentence << std::endl;
-    }
-
-    void receiveMessage() {
-        // Receive the reversed sentence from the server
-        char buffer[DEFAULT_BUFFER_SIZE] = { 0 };
-        int bytes_received = recv(client_socket, buffer, DEFAULT_BUFFER_SIZE - 1, 0);
-        if (bytes_received > 0) {
-            buffer[bytes_received] = '\0'; // Null-terminate the received data
-            std::cout << "Received from server: " << buffer << std::endl;
-        } else if (bytes_received == 0) {
-            std::cout << "Connection closed by server." << std::endl;
-        } else {
-            std::cerr << "Receive failed with error: " << WSAGetLastError() << std::endl;
-        }
-    }
-
     void cleanUp() {
         closesocket(client_socket);
         WSACleanup();
@@ -90,4 +67,7 @@ public:
         cleanUp();
     }
 };
+
+void receiveMessage(SOCKET client_socket, MessageHandler& message_handler);
+void sendMessage(SOCKET client_socket, std::string message);
 
