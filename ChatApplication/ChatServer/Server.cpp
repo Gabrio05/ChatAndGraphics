@@ -32,6 +32,8 @@ void clientReceive(Client* client, MessageHandler& messages) {
             strncpy_s(message.user, client->username.c_str(), sizeof(message.user));
 
             messages.add_message(message);
+            messages.got_new_messages();
+            // messages.cv.notify_all();
         }
     }
     closesocket(client->client_socket);
@@ -39,15 +41,14 @@ void clientReceive(Client* client, MessageHandler& messages) {
 
 void clientSend(Client* client, MessageHandler& messages) {
     while (!client->is_invalid) {
-        messages.got_new_messages();
         if (client->messages_sent < messages.processed_messages.size()) {
             ChatMessage message = messages.processed_messages.at(client->messages_sent);
             client->messages_sent++;
             std::string response = std::string(message.user) + " (" + std::to_string(message.timestamp) + "):" + 
                 (message.is_dm ? "" : " ") + message.buffer;
-            if (message.is_dm && message.user != client->username) {
+            if (message.is_dm && client->username != message.user) {
                 int index = std::string(message.buffer).find(": ");
-                if (client->username != std::string(message.buffer).substr(1, index - 2)) {
+                if (client->username != std::string(message.buffer).substr(1, index - 1).c_str()) {
                     continue;
                 }
             }

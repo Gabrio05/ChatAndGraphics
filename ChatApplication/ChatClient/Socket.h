@@ -5,6 +5,7 @@
 #include <iostream>
 #include <string>
 #include "MessageHandler.h"
+#include "Sound.h"
 
 constexpr int _socket_client_buffer_size = 1024;
 
@@ -68,6 +69,6 @@ public:
     }
 };
 
-void receiveMessage(SOCKET client_socket, MessageHandler& message_handler);
+void receiveMessage(SOCKET client_socket, MessageHandler& message_handler, SoundManager* sounds);
 void sendMessage(SOCKET client_socket, std::string message);
 

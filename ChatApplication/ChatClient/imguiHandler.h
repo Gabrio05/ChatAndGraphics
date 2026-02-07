@@ -19,6 +19,8 @@
 #include <tchar.h>
 #include <vector>
 #include "MessageHandler.h"
+#include <string>
+#include <set>
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "dxgi")
@@ -115,6 +117,8 @@ int runImgui(SOCKET client_socket, MessageHandler& message_handler);
 
 struct ImguiStateData {
     SOCKET client_socket;
+    std::string username = "";
+    std::set<std::string> open_windows{};
 };
 
 void ImGuiFrameHandler(ImguiStateData& state_data, MessageHandler& message_handler);

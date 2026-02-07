@@ -155,6 +155,7 @@
     <ClInclude Include="imguiHandler.h" />
     <ClInclude Include="MessageHandler.h" />
     <ClInclude Include="Socket.h" />
+    <ClInclude Include="Sound.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

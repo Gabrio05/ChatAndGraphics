@@ -14,7 +14,7 @@ int server() {
     MessageHandler messages{};
     std::vector<std::unique_ptr<std::thread>> client_connections{};
     while (true) {
-        Client* client = server.incomingConnection();
+        Client* client = server.incomingConnection(messages);
         client_connections.push_back(std::make_unique<std::thread>(clientReceive, client, std::ref(messages)));
         client_connections.push_back(std::make_unique<std::thread>(clientSend, client, std::ref(messages)));
     }

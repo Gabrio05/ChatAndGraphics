@@ -403,9 +403,12 @@ void ImGuiFrameHandler(ImguiStateData& state_data, MessageHandler& message_handl
                     user_list.erase(message.user);
                 }
             } else if (message.is_dm) {
-                ImGui::Text("Server has sent a direct message from %s: %s", message.user, message.buffer);  // TODO
+                // Debugging only now
+                // ImGui::Text("Server has sent a direct message from %s: %s", message.user, message.buffer);
+                // user_list.insert(message.user);
             } else {
                 ImGui::Text("%s: %s", message.user, message.buffer);
+                user_list.insert(message.user);
             }
         }
         ImGui::EndChild();
@@ -424,7 +427,12 @@ void ImGuiFrameHandler(ImguiStateData& state_data, MessageHandler& message_handl
         if (ImGui::BeginTable("split", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings)) {
             for (const std::string& user : user_list) {
                 ImGui::TableNextColumn();
-                ImGui::Button(user.c_str(), ImVec2(-FLT_MIN, 0.0f));
+                if (ImGui::Button(user.c_str(), ImVec2(-FLT_MIN, 0.0f))) {
+                    auto [it, inserted] = state_data.open_windows.insert(user);
+                    if (!inserted) {
+                        state_data.open_windows.erase(user);
+                    }
+                }
             }
             ImGui::EndTable();
         }
@@ -436,5 +444,51 @@ void ImGuiFrameHandler(ImguiStateData& state_data, MessageHandler& message_handl
 
     if (has_entered_message) {
         sendMessage(state_data.client_socket, buf);
+        has_entered_message = false;
+        if (state_data.username == "") {
+            state_data.username = buf;
+        }
+    }
+
+    if (state_data.username != "") {
+        std::vector<std::string> to_close;
+        for (const std::string& dm_name : state_data.open_windows) {
+            char new_buf[512] = "";
+            bool has_entered_dm_message = false;
+            bool is_open = true;
+            ImGui::SetNextWindowSizeConstraints(ImVec2(400, 300), ImVec2(FLT_MAX, FLT_MAX));
+            ImGui::Begin(("Direct Messages with " + dm_name).c_str(), &is_open);
+            {
+                ImGui::BeginChild("ChildUp", ImVec2(ImGui::GetContentRegionAvail().x, ImGui::GetContentRegionAvail().y - message_input_size - 10), ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
+                for (const ChatMessage& message : message_handler.processed_messages) {
+                    if (message.is_dm) {
+                        int index = std::string(message.buffer).find(": ");
+                        std::string recipient = std::string(message.buffer).substr(1, index - 1);
+                        if (dm_name != state_data.username && (recipient.c_str() == dm_name || message.user == dm_name) || dm_name == state_data.username && recipient.c_str() == dm_name && message.user == dm_name) {
+                            ImGui::Text("%s: %s", message.user, &message.buffer[index + 2]);
+                        }
+                    }
+                }
+                ImGui::EndChild();
+                ImGui::Separator();
+                ImGui::BeginChild("ChildDown", ImVec2(ImGui::GetContentRegionAvail().x, message_input_size), ImGuiChildFlags_None, ImGuiWindowFlags_None);
+                ImGui::SetNextItemWidth(-FLT_MIN);
+                has_entered_dm_message = ImGui::InputTextWithHint("##", "Input your message here and press Enter", new_buf, 512, ImGuiInputTextFlags_EnterReturnsTrue);
+                ImGui::EndChild();
+            }
+            ImGui::End();
+
+            if (!is_open) {
+                to_close.push_back(dm_name);
+            }
+
+            if (has_entered_dm_message) {
+                sendMessage(state_data.client_socket, (":" + dm_name + ": " + new_buf).c_str());
+                has_entered_dm_message = false;
+            }
+        }
+        for (const std::string& dm_name : to_close) {
+            state_data.open_windows.erase(dm_name);
+        }
     }
 }

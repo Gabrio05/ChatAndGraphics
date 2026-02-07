@@ -24,12 +24,14 @@ ChatMessage formatIncomingMessage(char buffer[_socket_client_buffer_size]) {
     int timestamp = atoi(ts);
 
     if (close[1] != ':') { return basicReturn(buffer); }
-    char* msg = close + 3;;
+    char* msg = close + 3;
 
     ChatMessage out{};
     if (close[2] == ':') { 
-        out.is_dm;
-        msg = close + 1;
+        out.is_dm = true;
+        char* message_start = std::strstr(close + 2, ": ");
+        if (!message_start) { return basicReturn(buffer); }
+        msg = close + 2;
     }
     
     strncpy_s(out.buffer, msg, sizeof(out.buffer));
@@ -38,7 +40,7 @@ ChatMessage formatIncomingMessage(char buffer[_socket_client_buffer_size]) {
     return out;
 }
 
-void receiveMessage(SOCKET client_socket, MessageHandler& message_handler) {
+void receiveMessage(SOCKET client_socket, MessageHandler& message_handler, SoundManager* sounds) {
     bool is_connected = true;
     while (is_connected) {
         char buffer[_socket_client_buffer_size] = { 0 };
@@ -46,8 +48,13 @@ void receiveMessage(SOCKET client_socket, MessageHandler& message_handler) {
         if (bytes_received > 0) {
             buffer[bytes_received] = '\0'; // Null-terminate the received data
             std::cout << "Received from server: " << buffer << std::endl;
-            ChatMessage message = formatIncomingMessage(buffer);//formatIncomingMessage(buffer);
+            ChatMessage message = formatIncomingMessage(buffer);
             message_handler.add_message(message);
+            if (message.is_dm) {
+                sounds->play("Audio/Inception_Horn_Sound_Effect.wav");
+            } else {
+                sounds->play("Audio/Rifle_Shot_Echo_-_Sound_Effect.wav");
+            }
         } else if (bytes_received == 0) {
             std::cout << "Connection closed by server." << std::endl;
             is_connected = false;

@@ -4,8 +4,8 @@
 #include <vector>
 
 struct ChatMessage {
-    char buffer[512];
-    char user[32];
+    char buffer[512] = "";
+    char user[32] = "";
     int timestamp = -1;  // If timestamp == -1, invalid message; if timestamp == 0, server message
     bool is_dm = false;
 };
@@ -15,6 +15,7 @@ class MessageHandler {
     std::queue<ChatMessage> pending_incoming_messages{};
 public:
     std::vector<ChatMessage> processed_messages{};
+    // std::condition_variable cv;
 
     void add_message(const ChatMessage& message) {
         std::lock_guard<std::mutex> l(lock);

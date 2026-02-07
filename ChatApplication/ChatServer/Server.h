@@ -48,7 +48,7 @@ public:
         }
     }
 
-    Client* incomingConnection() {
+    Client* incomingConnection(MessageHandler& messages) {
         if (listen(server_socket, SOMAXCONN) == SOCKET_ERROR) {
             std::cerr << "Listen failed with error: " << WSAGetLastError() << std::endl;
             cleanUp();
@@ -71,7 +71,8 @@ public:
         std::cout << "Accepted connection from " << client_ip << ":" << ntohs(client_address.sin_port) << std::endl;
 
 
-        std::string response = "Hi! What's your username?";
+        std::string response = " (-1): Hi! What's your username?";
+        clients.at(i)->messages_sent = messages.processed_messages.size();
         send(clients.at(i)->client_socket, response.c_str(), static_cast<int>(response.size()), 0);
         clients.at(i)->is_invalid = false;
         return clients.at(i).get();
