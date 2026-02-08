@@ -110,13 +110,16 @@ public:
     // - L: Light object for shading calculations
     // - ka, kd: Ambient and diffuse lighting coefficients
     void draw(Renderer& renderer, Light& L, float ka, float kd) {
+        L.omega_i.normalise();
+        colour ambient_ka = (L.ambient * ka);
+        colour diffuse_scale = L.L * kd;
         vec2D minV, maxV;
 
         // Get the screen-space bounds of the triangle
         getBoundsWindow(renderer.canvas, minV, maxV);
 
         // Skip very small triangles
-        if (area < 0.000001f) { return; }
+        if (area < 1.0f) { return; }
         
 
         // Precalculate barycentric coordinates and derivatives of them with respect to y/x
@@ -133,7 +136,7 @@ public:
         float beta_y = getBarycentricDerivative(false, 1);
         float gamma_x = getBarycentricDerivative(true, 2);
         float gamma_y = getBarycentricDerivative(false, 2);
-        // Iterate over each pixel row
+
         for (int y = y_under; y < y_above; y++) {
             float alpha = alpha_0;
             float beta = beta_0;
@@ -146,7 +149,7 @@ public:
             float gamma_down = x_under;
             float gamma_up = x_above;
 
-            float epsilon = 0.001;
+            float epsilon = 0.000001;
             if (alpha_x > epsilon) {
                 alpha_down = x_under - alpha / alpha_x;
             } else if (alpha_x < -epsilon) {
@@ -172,32 +175,28 @@ public:
             int x_down = std::ceil(std::max(alpha_down, std::max(beta_down, gamma_down)));
             int x_up = std::floor(std::min(alpha_up, std::min(beta_up, gamma_up))) + 1;
 
-            alpha += alpha_x * (x_down - x_under);
-            beta += beta_x * (x_down - x_under);
-            gamma += gamma_x * (x_down - x_under);
+            int delta_x = x_down - x_under;
+            alpha += alpha_x * delta_x;
+            beta += beta_x * delta_x;
+            gamma += gamma_x * delta_x;
             for (int x = x_down; x < x_up; x++) {
+                // Interpolate color, depth, and normals
+                colour c = interpolate(beta, gamma, alpha, v[0].rgb, v[1].rgb, v[2].rgb);
+                c.clampColour();
+                float depth = interpolate(beta, gamma, alpha, v[0].p[2], v[1].p[2], v[2].p[2]);
+                vec4 normal = interpolate(beta, gamma, alpha, v[0].normal, v[1].normal, v[2].normal);
+                normal.normalise();
 
-                // Check if the pixel lies inside the triangle
-                if (!(alpha < 0.f || beta < 0.f || gamma < 0.f)) {
-                    // Interpolate color, depth, and normals
-                    colour c = interpolate(beta, gamma, alpha, v[0].rgb, v[1].rgb, v[2].rgb);
-                    c.clampColour();
-                    float depth = interpolate(beta, gamma, alpha, v[0].p[2], v[1].p[2], v[2].p[2]);
-                    vec4 normal = interpolate(beta, gamma, alpha, v[0].normal, v[1].normal, v[2].normal);
-                    normal.normalise();
-
-                    // Perform Z-buffer test and apply shading
-                    if (renderer.zbuffer(x, y) > depth && depth > 0.001f) {
-                        // typical shader begin
-                        L.omega_i.normalise();
-                        float dot = std::max(vec4::dot(L.omega_i, normal), 0.0f);
-                        colour a = (c * kd) * (L.L * dot) + (L.ambient * ka); // using kd instead of ka for ambient
-                        // typical shader end
-                        unsigned char r, g, b;
-                        a.toRGB(r, g, b);
-                        renderer.canvas.draw(x, y, r, g, b);
-                        renderer.zbuffer(x, y) = depth;
-                    }
+                // typical shader begin
+                float dot = std::max(vec4::dot(L.omega_i, normal), 0.0f);
+                colour a = c * dot * diffuse_scale + ambient_ka; // using kd instead of ka for ambient
+                // typical shader end
+                unsigned char r, g, b;
+                a.toRGB(r, g, b);
+                // Perform Z-buffer test and apply shading
+                if (renderer.zbuffer(x, y) > depth && depth > 0.001f) {
+                    renderer.canvas.draw(x, y, r, g, b);
+                    renderer.zbuffer(x, y) = depth;
                 }
                 alpha += alpha_x;
                 beta += beta_x;
@@ -208,7 +207,76 @@ public:
             gamma_0 += gamma_y;
         }
 
+        // Iterate over each pixel row
+        //for (int y = y_under; y < y_above; y++) {
+        //    float alpha = alpha_0;
+        //    float beta = beta_0;
+        //    float gamma = gamma_0;
 
+        //    float alpha_down = x_under;
+        //    float alpha_up = x_above;
+        //    float beta_down = x_under;
+        //    float beta_up = x_above;
+        //    float gamma_down = x_under;
+        //    float gamma_up = x_above;
+
+        //    float epsilon = 0.001;
+        //    if (alpha_x > epsilon) {
+        //        alpha_down = x_under - alpha / alpha_x;
+        //    } else if (alpha_x < -epsilon) {
+        //        alpha_up = x_under - alpha / alpha_x;
+        //    } else if (alpha < 0) {
+        //        alpha_down = x_above + 1;
+        //    }
+        //    if (beta_x > epsilon) {
+        //        beta_down = x_under - beta / beta_x;
+        //    } else if (beta_x < -epsilon) {
+        //        beta_up = x_under - beta / beta_x;
+        //    } else if (beta < 0) {
+        //        beta_down = x_above + 1;
+        //    }
+        //    if (gamma_x > epsilon) {
+        //        gamma_down = x_under - gamma / gamma_x;
+        //    } else if (gamma_x < -epsilon) {
+        //        gamma_up = x_under - gamma / gamma_x;
+        //    } else if (gamma < 0) {
+        //        gamma_down = x_above + 1;
+        //    }
+
+        //    int x_down = std::ceil(std::max(alpha_down, std::max(beta_down, gamma_down)));
+        //    int x_up = std::floor(std::min(alpha_up, std::min(beta_up, gamma_up))) + 1;
+
+        //    alpha += alpha_x * (x_down - x_under);
+        //    beta += beta_x * (x_down - x_under);
+        //    gamma += gamma_x * (x_down - x_under);
+        //    for (int x = x_down; x < x_up; x++) {
+        //        // Interpolate color, depth, and normals
+        //        colour c = interpolate(beta, gamma, alpha, v[0].rgb, v[1].rgb, v[2].rgb);
+        //        c.clampColour();
+        //        float depth = interpolate(beta, gamma, alpha, v[0].p[2], v[1].p[2], v[2].p[2]);
+        //        vec4 normal = interpolate(beta, gamma, alpha, v[0].normal, v[1].normal, v[2].normal);
+        //        normal.normalise();
+
+        //        // typical shader begin
+        //        float dot = std::max(vec4::dot(L.omega_i, normal), 0.0f);
+        //        colour a = (c * kd) * (L.L * dot) + ambient_ka; // using kd instead of ka for ambient
+        //        // typical shader end
+        //        unsigned char r, g, b;
+        //        a.toRGB(r, g, b);
+
+        //        // Perform Z-buffer test and apply shading
+        //        if (renderer.zbuffer(x, y) > depth && depth > 0.001f) {
+        //            renderer.canvas.draw(x, y, r, g, b);
+        //            renderer.zbuffer(x, y) = depth;
+        //        }
+        //        alpha += alpha_x;
+        //        beta += beta_x;
+        //        gamma += gamma_x;
+        //    }
+        //    alpha_0 += alpha_y;
+        //    beta_0 += beta_y;
+        //    gamma_0 += gamma_y;
+        //}
 
         // Iterate over the bounding box and check each pixel (with pre_calculated bary)
         /*for (int y = y_under; y < y_above; y++) {
@@ -257,7 +325,7 @@ public:
                 if (getCoordinates(vec2D((float)x, (float)y), alpha, beta, gamma)) {
                     // Interpolate color, depth, and normals
                     colour c = interpolate(beta, gamma, alpha, v[0].rgb, v[1].rgb, v[2].rgb);
-                   c.clampColour();
+                    c.clampColour();
                     float depth = interpolate(beta, gamma, alpha, v[0].p[2], v[1].p[2], v[2].p[2]);
                     vec4 normal = interpolate(beta, gamma, alpha, v[0].normal, v[1].normal, v[2].normal);
                     normal.normalise();
@@ -304,6 +372,14 @@ public:
         minV.y = std::max(minV.y, static_cast<float>(0));
         maxV.x = std::min(maxV.x, static_cast<float>(canvas.getWidth()));
         maxV.y = std::min(maxV.y, static_cast<float>(canvas.getHeight()));
+    }
+
+    void getBoundsWindow(int height, int width, vec2D& minV, vec2D& maxV) {
+        getBounds(minV, maxV);
+        minV.x = std::max(minV.x, static_cast<float>(0));
+        minV.y = std::max(minV.y, static_cast<float>(0));
+        maxV.x = std::min(maxV.x, static_cast<float>(width));
+        maxV.y = std::min(maxV.y, static_cast<float>(height));
     }
 
     // Debugging utility to display the triangle bounds on the canvas

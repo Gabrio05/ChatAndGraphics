@@ -4,18 +4,22 @@
 #include "GamesEngineeringBase.h"
 #include "zbuffer.h"
 #include "matrix.h"
+#include <mutex>
+
 
 // The `Renderer` class handles rendering operations, including managing the
 // Z-buffer, canvas, and perspective transformations for a 3D scene.
 class Renderer {
-    float fov = 90.0f * (float)M_PI / 180.0f; // Field of view in radians (converted from degrees)
-    float aspect = 4.0f / 3.0f;        // Aspect ratio of the canvas (width/height)
-    float n = 0.1f;                    // Near clipping plane distance
-    float f = 100.0f;                  // Far clipping plane distance
+protected:
+    const float fov = 90.0f * (float)M_PI / 180.0f; // Field of view in radians (converted from degrees)
+    const float aspect = 4.0f / 3.0f;        // Aspect ratio of the canvas (width/height)
+    const float n = 0.1f;                    // Near clipping plane distance
+    const float f = 100.0f;                  // Far clipping plane distance
 public:
     Zbuffer<float> zbuffer;                  // Z-buffer for depth management
     GamesEngineeringBase::Window canvas;     // Canvas for rendering the scene
     matrix perspective;                      // Perspective projection matrix
+    //std::mutex lock;
 
     // Constructor initializes the canvas, Z-buffer, and perspective projection matrix.
     Renderer() {

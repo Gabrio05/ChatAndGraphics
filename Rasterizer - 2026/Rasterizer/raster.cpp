@@ -19,6 +19,7 @@
 #include "vec4.h"
 #include <memory>
 #include <utility>
+#include <thread>
 
 // Main rendering function that processes a mesh, transforms its vertices, applies lighting, and draws triangles on the canvas.
 // Input Variables:
@@ -26,7 +27,7 @@
 // - mesh: Pointer to the Mesh object containing vertices and triangles to render.
 // - camera: Matrix representing the camera's transformation.
 // - L: Light object representing the lighting parameters.
-static void render(Renderer& renderer, Mesh* mesh, matrix& camera, Light& L) {
+static void render(Renderer& renderer, Mesh* mesh, const matrix& camera, Light& L) {
     // Combine perspective, camera, and world transformations for the mesh
     matrix p = renderer.perspective * camera * mesh->world;
 
@@ -62,6 +63,26 @@ static void render(Renderer& renderer, Mesh* mesh, matrix& camera, Light& L) {
     }
 }
 
+static void threadComputeRender(const std::vector<Mesh*>& scene, Renderer& renderer, const matrix& camera, Light& L, std::atomic<int>& i) {
+    int next_object = i++;
+    while (next_object < scene.size()) {
+        render(renderer, scene.at(scene.size() - next_object - 1), camera, L);
+        next_object = i++;
+    }
+}
+
+static void parallelRendering(const std::vector<Mesh*>& scene, Renderer& renderer, const matrix& camera, Light& L) {
+    std::atomic<int> objects_done = 0;
+    constexpr int thread_count = 4;
+    std::vector<std::thread> threads;
+    for (int i = 0; i < thread_count; i++) {
+        threads.emplace_back(std::thread(threadComputeRender, std::ref(scene), std::ref(renderer), std::ref(camera), std::ref(L), std::ref(objects_done)));
+    }
+    for (int i = 0; i < thread_count; i++) {
+        threads.at(i).join();
+    }
+}
+
 // Test scene function to demonstrate rendering with user-controlled transformations
 // No input variables
 static void sceneTest() {
@@ -86,6 +107,11 @@ static void sceneTest() {
             mesh->world = matrix::makeTranslation(5.0f * i + 1, 3.0f * j, -50.0f);
             scene.push_back(std::move(mesh));
         }
+    }
+
+    std::vector<Mesh*> stupid_scene;  // Because the other scenes aren't using smart pointers...
+    for (int i = 0; i < scene.size(); i++) {
+        stupid_scene.push_back(scene.at(i).get());
     }
 
     float zoffset = 8.0f; // Initial camera Z-offset
@@ -126,9 +152,10 @@ static void sceneTest() {
         if (renderer.canvas.keyPressed('E')) z += -0.1f;*/
 
         // Render each object in the scene
-        for (auto& m : scene) {
-            render(renderer, m.get(), camera, L);
-        }
+        parallelRendering(stupid_scene, renderer, camera, L);
+        //for (auto& m : scene) {
+        //    render(renderer, m.get(), camera, L);
+        //}
 
         renderer.present(); // Display the rendered frame
     }
@@ -201,9 +228,10 @@ static void scene1() {
             }
         }
 
-        for (auto& m : scene) {
-            render(renderer, m, camera, L);
-        }
+        parallelRendering(scene, renderer, camera, L);
+        //for (auto& m : scene) {
+        //    render(renderer, m, camera, L);
+        //}
         renderer.present();
     }
 
@@ -272,8 +300,10 @@ static void scene2() {
 
         if (renderer.canvas.keyPressed(VK_ESCAPE)) break;
 
-        for (auto& m : scene)
-            render(renderer, m, camera, L);
+        parallelRendering(scene, renderer, camera, L);
+        //for (auto& m : scene) {
+        //    render(renderer, m, camera, L);
+        //}
         renderer.present();
     }
 
@@ -282,7 +312,7 @@ static void scene2() {
 }
 
 int main() {
-    const int scene_number = 1;
+    const int scene_number = 2;
     switch (scene_number) {
     case 1:
         scene1();
