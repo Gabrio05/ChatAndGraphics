@@ -312,7 +312,7 @@ static void scene2() {
 }
 
 int main() {
-    const int scene_number = 2;
+    const int scene_number = 3;
     switch (scene_number) {
     case 1:
         scene1();
